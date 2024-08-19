@@ -1,7 +1,7 @@
-#?????
+#端口号配置
 server:
   port: 8089
-#???????
+#spring配置
 spring:
   datasource:
     type: com.alibaba.druid.pool.DruidDataSource
@@ -34,8 +34,13 @@ mybatis-plus:
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
   global-config:
     db-config:
-      #??mybatis plus ???????????NULL???
+      #??mybatis plus 设置更新非空
       update-strategy: not_empty
+      #设置主键自增
+      id-type: auto
+  mapper-locations: classpath:/mapper/**/*.xml
+#文件上传地址
+file-save-path: D:/202200800581/img/
 logging:
    pattern:
      console: '%d{yyyy-MM-dd} [%thread] %-5level %logger- %msg%n'

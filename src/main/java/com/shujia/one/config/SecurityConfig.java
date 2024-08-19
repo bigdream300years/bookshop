@@ -25,60 +25,72 @@ import org.springframework.security.web.authentication.rememberme.PersistentToke
 
 import javax.sql.DataSource;
 import java.io.IOException;
-
+/*
+spring security配置类
+功能负责处理登录登出等判断操作，记住我的实现
+ */
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
     @Resource
-    AuthorizeService authorizeService;
+    AuthorizeService authorizeService;//通过名字自动注入service层AuthorizeService类到bean中
     //security登录验证
     @Resource
-    DataSource dataSource;
+    DataSource dataSource;//注入数据源类到bean中
     @Bean
+    /*  1、SecurityFilterChain负责将请求通过一系列的过滤器进行处理，以确保Web应用的安全性
+        2、PersistentTokenRepository用于持久化token实现记住我功能类，由自己手动实现
+        3、HttpSecurity主要用于构建和配置HTTP安全相关的设置，提供了一套链式API，用于配置应用中的URL权限、身份验证、会话管理和CSRF防护等安全措施。
+     */
     public SecurityFilterChain filterChain(HttpSecurity http,PersistentTokenRepository repository) throws Exception {
         return http
                 .authorizeHttpRequests( authorize -> authorize
-                        .requestMatchers("api/auth/**")
-                        .permitAll()
-                        .anyRequest().authenticated()
-
+                        .requestMatchers("api/auth/**")//对这个开头请求放行，让用户可以登录等操作
+                        .permitAll()//对于api/auth/开头请求都放行，随后进登录与登出判断
+                        .anyRequest().authenticated()//其它请求需要经过认证
                 )
                 .formLogin(formLogin -> formLogin
                         .loginProcessingUrl("/api/auth/login")
-                        .permitAll()
-                        .successHandler(this::onAuthenticationSuccess)
-                        .failureHandler(this::onAuthenticationFailure)
+                        .permitAll()//允许登录操作的访问
+                        //对于登录请求通过手写登录成功与失败方法返回对应值
+                        .successHandler(this::onAuthenticationSuccess)//成功提交
+                        .failureHandler(this::onAuthenticationFailure)//失败提交
                 )
                 .logout(logout->logout
                         .logoutUrl("/api/auth/logout")
-                        .logoutSuccessHandler(this::onAuthenticationSuccess)
+                        .logoutSuccessHandler(this::onAuthenticationSuccess)//登出成功执行方法
                 )
-                .rememberMe()
+                .rememberMe()//实现后面记住我方法，创建token当用户成功登录时，通过拦截器中的验证
                 .rememberMeParameter("remember")
-                .tokenRepository(repository)
-                .tokenValiditySeconds(3600*24*7)
+                .tokenRepository(repository)//
+                .tokenValiditySeconds(3600*24*7)//设置记住我token过期时间
                 .and()
-                .userDetailsService(authorizeService)
+                //用户信息验证注入自己写的校验类，由authotizeService类中自己写的loadUserByUsername获取同账户名账户，然后进行账号和密码的校验
+                //.userDetailsService(authorizeService)
                 .csrf(AbstractHttpConfigurer::disable)
                 .exceptionHandling(exception->exception
                         .authenticationEntryPoint(this::onAuthenticationFailure)
                 )
-                .build();
+                .build();//构建返回一个SecurityFilterChain对象
 
     }
+    //实现token持久化记住我功能类
     @Bean
     public PersistentTokenRepository persistentTokenRepository() {
         JdbcTokenRepositoryImpl jdbcTokenRepository = new JdbcTokenRepositoryImpl();
-        jdbcTokenRepository.setDataSource(dataSource);
+        jdbcTokenRepository.setDataSource(dataSource);//将生成token存入数据源实现持久化
         jdbcTokenRepository.setCreateTableOnStartup(false);
         return jdbcTokenRepository;
     }
+    //用户验证服务，用户信息验证注入自己写的校验类，由authotizeService类中自己写的loadUserByUsername获取同账户名账户，然后进行账号和密码的校验，登录成功后返回一个登录令牌
     @Bean
     public AuthenticationManager authenticationManager(HttpSecurity security) throws Exception {
-        return security.getSharedObject(AuthenticationManagerBuilder.class)
+        return security.getSharedObject(AuthenticationManagerBuilder.class)//拿到对应AuthenticationManagerBuilder实例用于注入authorizeService
+                //构建AuthenticationManager方法实现其中AuthenticationProvider身份验证,userDetailsService拿到authorizeService中loadbyname方法返回user对象
                 .userDetailsService(authorizeService).and().build();
 
     }
+    //进行密码加密，储存加密后密文在数据库中
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();

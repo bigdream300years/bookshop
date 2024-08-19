@@ -1,5 +1,5 @@
 package com.shujia.one.entity;
-
+//账户类实体信息，储存用户账户信息
 public class Account {
  private int id;
  private String username;

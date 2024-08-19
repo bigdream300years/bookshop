@@ -1,5 +1,5 @@
 package com.shujia.one.entity;
-
+//储存已登录用户的信息
 public class AccountUser {
     private int id;
     private String username;
