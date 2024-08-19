@@ -1,7 +1,7 @@
 package com.shujia.one.entity;
 
 import lombok.Data;
-
+//封装信息类，封装向前端返回的信息
 @Data
 public class RestBean<T> {
     private int status;
